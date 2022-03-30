@@ -1,2 +1,7 @@
-dylib
-log
+# ignore all logs 
+*.log
+*.log~*
+*.lst
+*.lxi
+
+*.dylib

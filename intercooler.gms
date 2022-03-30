@@ -1,116 +1,55 @@
-$Title Test extrinsic functions in tricclib (TRILIB01,SEQ=521)
+$Title Optimum pressure ratio of two stage compressor train with intercooling
 
 $ontext
-This test makes sure that the extrinsic cosine and sine (both using rad and
-grad) implemented in a C library work in the same way as the intrinsic versions.
-Additionally the functions are used in a simple model.
-
-Contributor: L. Westermann
+This test makes sure that the extrinsic CoolProp functions are working correctly.
+Contributor: V.R. Akkaya 
 $offtext
 
+$funcLibIn intercooler libintercooler64.dylib
 
-$ifThen set nocomp
-*  Use precompiled library provided by testlib
-$  batinclude precomp.inc tricclib
-$else
-*  Compile library from source code
-$  batinclude compilec.inc tri
-$endIf
-
-function myCos        / myLib.Cosine /
-         mySin        / myLib.Sine   /
-         myPi         / myLib.Pi     /;
-
-set g  / 1*360 /
-    h  / CosInt      Cosine Intrinsic
-         CosExtRad   Cosine Extrinsic (Radian)
-         CosExtDeg   Cosine Extrinsic (Degree)
-         SinInt      Sine Intrinsic
-         SinExtRad   Sine Extrinsic (Radian)
-         SinExtDeg   Sine Extrinsic (Degree)   /
-    hh / F           Function Value
-         G           Gradient Value
-         H           Hessian Value
-         GN          Gradient numeric
-         HN          Hessian numeric   /;
-
-parameter Deg(g)       Degree Value
-          Rad(g)       Radian Value
-          Test(g,h,hh);
-
-Deg(g) = ord(g);
-Rad(g) = ord(g)*pi/180;
-
-option FDDelta=1e-3;
-Test(g,'CosInt'   ,'F') = cos  (Rad(g));
-Test(g,'CosExtRad','F') = mycos(Rad(g));
-Test(g,'CosExtDeg','F') = mycos(Deg(g),1);
-Test(g,'SinInt'   ,'F') = sin  (Rad(g));
-Test(g,'SinExtRad','F') = mysin(Rad(g));
-Test(g,'SinExtDeg','F') = mysin(Deg(g),1);
-
-Test(g,'CosInt'   ,'G') = cos.grad  (1: Rad(g));
-Test(g,'CosExtRad','G') = mycos.grad(1: Rad(g));
-Test(g,'CosExtDeg','G') = mycos.grad(1: Deg(g),1)*180/pi;
-Test(g,'SinInt'   ,'G') = sin.grad  (1: Rad(g));
-Test(g,'SinExtRad','G') = mysin.grad(1: Rad(g));
-Test(g,'SinExtDeg','G') = mysin.grad(1: Deg(g),1)*180/pi;
-
-Test(g,'CosInt'   ,'H') = cos.hess  (1:1: Rad(g));
-Test(g,'CosExtRad','H') = mycos.hess(1:1: Rad(g));
-Test(g,'CosExtDeg','H') = mycos.hess(1:1: Deg(g),1)*180/pi*180/pi;
-Test(g,'SinInt'   ,'H') = sin.hess  (1:1: Rad(g));
-Test(g,'SinExtRad','H') = mysin.hess(1:1: Rad(g));
-Test(g,'SinExtDeg','H') = mysin.hess(1:1: Deg(g),1)*180/pi*180/pi;
-
-Test(g,'CosInt'   ,'GN') = cos.gradn  (1: Rad(g));
-Test(g,'CosExtRad','GN') = mycos.gradn(1: Rad(g));
-Test(g,'CosExtDeg','GN') = mycos.gradn(1: Deg(g),1)*180/pi;
-Test(g,'SinInt'   ,'GN') = sin.gradn  (1: Rad(g));
-Test(g,'SinExtRad','GN') = mysin.gradn(1: Rad(g));
-Test(g,'SinExtDeg','GN') = mysin.gradn(1: Deg(g),1)*180/pi;
-
-Test(g,'CosInt'   ,'HN') = cos.hessn  (1:1: Rad(g));
-Test(g,'CosExtRad','HN') = mycos.hessn(1:1: Rad(g));
-Test(g,'CosExtDeg','HN') = mycos.hessn(1:1: Deg(g),1)*180/pi*180/pi;
-Test(g,'SinInt'   ,'HN') = sin.hessn  (1:1: Rad(g));
-Test(g,'SinExtRad','HN') = mysin.hessn(1:1: Rad(g));
-Test(g,'SinExtDeg','HN') = mysin.hessn(1:1: Deg(g),1)*180/pi*180/pi;
+function
+    EnthalpyPT /intercooler.EnthalpyPT/
+    EntropyPT  /intercooler.EntropyPT/
+    EnthalpyPs /intercooler.EnthalpyPs/;
 
 scalar
-    error01 'mypi <> pi';
-set error02 'cos/sin <> mycos/mysin (rad)'
-    error03 'cos/sin <> mycos/mysin (grad)';
+  T1 /300/
+  P1 /1e6/
+  P4 /5e6/
+  h1, s1;
+  
+variables
+  P2, h2
+  s3, h3
+  h4
+  wtot;
+  
+equations
+  eq1, eq2, eq3, eq4, eqx, eqx2;
+  
+h1 = EnthalpyPT(P1, T1);
+s1 = EntropyPT(P1, T1);
+* wtest = EnthalpyPs(1.5e6, EntropyPT(1.5e6, s1))-EnthalpyPT(P1, T1) -
+*        EnthalpyPs(P4, EntropyPT(1.5e6, T1))-EnthalpyPT(1.5E6, T1);
 
-error01 = abs(pi <> mypi) > 1e-12;
+eq1.. h2 =e= EnthalpyPs(P2, s1);
+eq2.. h3 =e= EnthalpyPT(P2, T1);
+eq3.. s3 =e= EntropyPT(P2, T1);
+eq4.. h4 =e= EnthalpyPs(P4, s3);
+eqx.. wtot =e= h2-h1 + h4-h3;
+eqx2.. wtot =e= EnthalpyPs(P2, EntropyPT(P1, T1))-EnthalpyPT(P1, T1) +
+        EnthalpyPs(P4, EntropyPT(P2, T1))-EnthalpyPT(P2, T1);
 
-error02(g,'cos',hh) = abs(Test(g,'CosInt',hh) - Test(g,'CosExtRad',hh)) > 1e-5;
-error02(g,'sin',hh) = abs(Test(g,'SinInt',hh) - Test(g,'SinExtRad',hh)) > 1e-5;
-error03(g,'cos',hh) = abs(Test(g,'CosInt',hh) - Test(g,'CosExtDeg',hh)) > 1e-5;
-error03(g,'sin',hh) = abs(Test(g,'SinInt',hh) - Test(g,'SinExtDeg',hh)) > 1e-5;
+P2.lo = P1;
+P2.up = P4;
 
-abort$(error01+card(error02)+card(error03))
-       error01, error02, error03;
+model m /all/;
+model m2 /eqx2/;
 
-********************************************************************************
+options nlp=CONOPT;
+solve m2 using nlp minimizing wtot;
 
-Scalar trimode /0/;
+* display P2.l, wtot.l, h1, h2.l, h3.l, h4.l, wtest
+display P2.l, wtot.l;
 
-variable x;
-equation e;
 
-e..   sqr(mysin(x,trimode)) + sqr(mycos(x,trimode)) =e= 1;
-
-model m /e/;
-
-x.lo = 0; x.l=3*pi
-solve m min x using nlp;
-
-abort$(abs(x.l-0)>1e-12) 'x<>0';
-
-* Now do the same using degree instead of radian
-trimode = 1;
-x.lo = 0; x.l=540;
-solve m min x using nlp;
-
-abort$(abs(x.l-0)>1e-12) 'x<>0';
