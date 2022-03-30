@@ -22,7 +22,7 @@
 #include "CoolPropLib.h"
 
 #define CMPVER     1
-
+#define FLUID      "Air"
 
 /** function library data
  *
@@ -45,7 +45,10 @@ struct EXTRFUNC_Data
  * functions itself.
  */
 EXTRFUNC_DECL_FUNCCALL(EnthalpyPT);
-EXTRFUNC_DECL_FUNCCALL(EnthalpyPS);
+EXTRFUNC_DECL_FUNCCALL(EnthalpyPs);
+EXTRFUNC_DECL_FUNCCALL(EntropyPT);
+EXTRFUNC_DECL_FUNCCALL(Pcrit);
+EXTRFUNC_DECL_FUNCCALL(Tcrit);
 
 /* implementations */
 
@@ -130,7 +133,20 @@ EXTRFUNC_DECL_FUNCCALL(EnthalpyPT)
       msg[0] = strlen(msg+1);
       return errorcallback(EXTRFUNC_RETURN_FUNCTION, EXTRFUNC_EVALERROR_DOMAIN, msg, errorcbmem);
    }
-   *funcvalue = PropsSI("H", "P", x[0], "T", x[1], "Water");
+   // calculate the specific enthalpy of fluid
+   *funcvalue = PropsSI("H", "P", x[0], "T", x[1], FLUID);
+   // calculate the first derivative with respect to pressure and temperature 
+   if(derivrequest>0) {
+      gradient[0] = PropsSI("d(H)/d(P)|T", "P", x[0], "T", x[1], FLUID);
+      gradient[1] = PropsSI("d(H)/d(T)|P", "P", x[0], "T", x[1], FLUID);
+      // calculate the hessian matrix with respect to pressure and temperature
+      if(derivrequest>1) {
+         hessian[0] = PropsSI("d(d(H)/d(P)|T)/d(P)|T", "P", x[0], "T", x[1], FLUID);
+         hessian[1] = PropsSI("d(d(H)/d(P)|T)/d(T)|P", "P", x[0], "T", x[1], FLUID);
+         hessian[2] = PropsSI("d(d(H)/d(T)|P)/d(P)|T", "P", x[0], "T", x[1], FLUID);
+         hessian[3] = PropsSI("d(d(H)/d(T)|P)/d(T)|P", "P", x[0], "T", x[1], FLUID);
+      }
+   }
    return EXTRFUNC_RETURN_OK;
 }
 
@@ -157,66 +173,29 @@ EXTRFUNC_DECL_FUNCCALL(EnthalpyPs)
       return errorcallback(EXTRFUNC_RETURN_FUNCTION, EXTRFUNC_EVALERROR_DOMAIN, msg, errorcbmem);
    }
 
-   /* check 2nd argument */
-   if( nargs == 2 && x[1] != (double)FUNCMODE_RAD && x[1] != (double)FUNCMODE_DEG )
-   {
-      sprintf(msg+1, "Cosine: mode has to be %d (rad) or %d (deg)", FUNCMODE_RAD, FUNCMODE_DEG);
-      msg[0] = strlen(msg+1);
-      return errorcallback(EXTRFUNC_RETURN_FUNCTION, EXTRFUNC_EVALERROR_DOMAIN, msg, errorcbmem);
-   }
-
-   /* decide whether we use radians or degrees */
-   funcmode = data->funcmode;
-   if( nargs == 2 )
-      funcmode = (FUNCMODE)x[1];
-
-   /* convert degrees into radians, if necessary */
-   if( funcmode == FUNCMODE_DEG )
-      locX = x[0] * M_PI/180.0;
-   else
-      locX = x[0];
-
-   /* check for sigloss */
-   if( fabs(locX) > 1.0e12 )
-   {
-      sprintf(msg+1, "Cosine: |x| > 1e12");
-      msg[0] = strlen(msg+1);
-      return errorcallback(EXTRFUNC_RETURN_FUNCTION, EXTRFUNC_EVALERROR_SIGLOSS, msg, errorcbmem);
-   }
-
-   /* evaluate function value */
-   *funcvalue = cos(locX);
-
+   // calculate the specific enthalpy of fluid with respect to pressure and specific entropy
+   *funcvalue = PropsSI("H", "P", x[0], "S", x[1], FLUID);
    if( derivrequest > 0 )
    {
       /* evaluate gradient */
-      if( funcmode == FUNCMODE_DEG )
-         gradient[0] = -sin(locX) * M_PI/180.0;
-      else
-         gradient[0] = -sin(locX);
-
+      gradient[0] = PropsSI("d(H)/d(P)|S", "P", x[0], "S", x[1], FLUID);
+      gradient[1] = PropsSI("d(H)/d(S)|P", "P", x[0], "S", x[1], FLUID);
       /* evaluate Hessian */
       if( derivrequest > 1 )
       {
-         if( funcmode == FUNCMODE_DEG )
-            hessian[0] = -(*funcvalue) * M_PI/180.0 * M_PI/180.0;
-         else
-            hessian[0] = -(*funcvalue);
+         hessian[0] = PropsSI("d(d(H)/d(P)|S)/d(P)|S", "P", x[0], "S", x[1],FLUID);
+         hessian[1] = PropsSI("d(d(H)/d(P)|S)/d(S)|P", "P", x[0], "S", x[1],FLUID);
+         hessian[2] = PropsSI("d(d(H)/d(S)|P)/d(P)|S", "P", x[0], "S", x[1],FLUID);
+         hessian[3] = PropsSI("d(d(H)/d(S)|P)/d(S)|P", "P", x[0], "S", x[1],FLUID);
       }
    }
 
    return EXTRFUNC_RETURN_OK;
 }
 
-/** Extrinsic Function implementing Sine.
- *
- * The implementation is equivalent to the one of Cosine.
- */
-EXTRFUNC_DECL_FUNCCALL(Sine)
+EXTRFUNC_DECL_FUNCCALL(EntropyPT)
 {
    char msg[EXTRFUNC_STRSIZE];
-   double locX;
-   FUNCMODE funcmode;
 
    assert(data != NULL);
    assert(x != NULL);
@@ -229,73 +208,33 @@ EXTRFUNC_DECL_FUNCCALL(Sine)
    /* check for correct number of arguments */
    if( nargs < 1 || nargs > 2 )
    {
-      sprintf(msg+1, "Sine: two arguments expected. Called with %d", nargs);
+      sprintf(msg+1, "Cosine: two arguments expected. Called with %d", nargs);
       msg[0] = strlen(msg+1);
       return errorcallback(EXTRFUNC_RETURN_FUNCTION, EXTRFUNC_EVALERROR_DOMAIN, msg, errorcbmem);
    }
 
-   /* check 2nd argument */
-   if( nargs == 2 && x[1] != (double)FUNCMODE_RAD && x[1] != (double)FUNCMODE_DEG )
-   {
-      sprintf(msg+1, "Sine: mode has to be %d (rad) or %d (deg)", FUNCMODE_RAD, FUNCMODE_DEG);
-      msg[0] = strlen(msg+1);
-      return errorcallback(EXTRFUNC_RETURN_FUNCTION, EXTRFUNC_EVALERROR_DOMAIN, msg, errorcbmem);
-   }
-
-   /* decide whether we use radians or degrees */
-   funcmode = data->funcmode;
-   if( nargs == 2 )
-      funcmode = (FUNCMODE)x[1];
-
-   /* convert degrees into radians, if necessary */
-   if( funcmode == FUNCMODE_DEG )
-      locX = x[0] * M_PI/180.0;
-   else
-      locX = x[0];
-
-   /* check for sigloss */
-   if( fabs(locX) > 1.0e12 )
-   {
-      sprintf(msg+1, "Sine: |x| > 1e12");
-      msg[0] = strlen(msg+1);
-      return errorcallback(EXTRFUNC_RETURN_FUNCTION, EXTRFUNC_EVALERROR_SIGLOSS, msg, errorcbmem);
-   }
-
-   /* evaluate function value */
-   *funcvalue = sin(locX);
-
-/*
-   This version of the library leaves the derivative calculation to the finite
-   difference method inside GAMS
-*/
+   // calculate the specific entropy of fluid with respect to pressure and temperature
+   *funcvalue = PropsSI("S", "P", x[0], "T", x[1], FLUID);
    if( derivrequest > 0 )
    {
-#if 0
       /* evaluate gradient */
-      if( funcmode == FUNCMODE_DEG )
-         gradient[0] = cos(locX) * M_PI/180.0;
-      else
-         gradient[0] = cos(locX);
-
+      gradient[0] = PropsSI("d(S)/d(P)|T", "P", x[0], "T", x[1], FLUID);
+      gradient[1] = PropsSI("d(S)/d(T)|P", "P", x[0], "T", x[1], FLUID);
       /* evaluate Hessian */
       if( derivrequest > 1 )
       {
-         if( funcmode == FUNCMODE_DEG )
-            hessian[0] = -(*funcvalue) * M_PI/180.0 * M_PI/180.0;
-         else
-            hessian[0] = -(*funcvalue);
+         hessian[0] = PropsSI("d(d(S)/d(P)|T)/d(P)|T", "P", x[0], "T", x[1],FLUID);
+         hessian[1] = PropsSI("d(d(H)/d(P)|T)/d(T)|P", "P", x[0], "T", x[1],FLUID);
+         hessian[2] = PropsSI("d(d(H)/d(T)|P)/d(P)|T", "P", x[0], "T", x[1],FLUID);
+         hessian[3] = PropsSI("d(d(H)/d(T)|P)/d(T)|P", "P", x[0], "T", x[1],FLUID);
       }
-#else
-      sprintf(msg+1, "No derivatives available for Sine");
-      msg[0] = strlen(msg+1);
-      return errorcallback(EXTRFUNC_RETURN_SYSTEM, EXTRFUNC_EVALERROR_NONE, msg, errorcbmem);
-#endif
    }
+
    return EXTRFUNC_RETURN_OK;
 }
 
-/** Extrinsic Function implementing Pi. */
-EXTRFUNC_DECL_FUNCCALL(Pi)
+/** Extrinsic Function implementing Pcrit. */
+EXTRFUNC_DECL_FUNCCALL(Pcrit)
 {
    char msg[EXTRFUNC_STRSIZE];
 
@@ -304,12 +243,32 @@ EXTRFUNC_DECL_FUNCCALL(Pi)
 
    if( nargs != 0 )
    {
-      sprintf(msg+1, "Pi: zero arguments expected. Called with %d", nargs);
+      sprintf(msg+1, "Tcrit: zero arguments expected. Called with %d", nargs);
       msg[0] = strlen(msg+1);
       return errorcallback(EXTRFUNC_RETURN_FUNCTION, EXTRFUNC_EVALERROR_DOMAIN, msg, errorcbmem);
    }
 
-   *funcvalue = M_PI;
+   *funcvalue = PropsSI("Pcrit", "T", 300.0, "P", 101325.0, FLUID);
+
+   return EXTRFUNC_RETURN_OK;
+}
+
+/** Extrinsic Function implementing Tcrit. */
+EXTRFUNC_DECL_FUNCCALL(Tcrit)
+{
+   char msg[EXTRFUNC_STRSIZE];
+
+   assert(funcvalue != NULL);
+   assert(errorcallback != NULL);
+
+   if( nargs != 0 )
+   {
+      sprintf(msg+1, "Tcrit: zero arguments expected. Called with %d", nargs);
+      msg[0] = strlen(msg+1);
+      return errorcallback(EXTRFUNC_RETURN_FUNCTION, EXTRFUNC_EVALERROR_DOMAIN, msg, errorcbmem);
+   }
+
+   *funcvalue = PropsSI("Tcrit", "T", 300.0, "P", 101325.0, FLUID);
 
    return EXTRFUNC_RETURN_OK;
 }

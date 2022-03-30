@@ -15,6 +15,7 @@
  * CMakeLists.txt in the repo root to see some examples.
  * 
  */
+#include <stdbool.h>
 
 #ifndef COOLPROPDLL_H
 #define COOLPROPDLL_H
