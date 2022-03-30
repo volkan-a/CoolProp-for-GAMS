@@ -1,0 +1,12 @@
+LIBRARY {{lib['name']}}.dll
+EXPORTS
+xcreate
+xfree
+libinit
+{% for funcname in funcs %}
+{{- funcname }}
+{% endfor -%}
+querylibrary
+{%- for funcname in lib['extraexports'] %}
+{{ funcname -}}
+{% endfor -%}
