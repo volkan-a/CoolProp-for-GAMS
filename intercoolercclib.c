@@ -109,7 +109,7 @@ EXTRFUNC_API int EXTRFUNC_CALLCONV libinit(
    return 0;
 }
 
-/** Extrinsic Function to calculate the enthalpy of water 
+/** Extrinsic Function to calculate the specific enthalpy of fluid 
  * for given temperature and pressure
  */
 EXTRFUNC_DECL_FUNCCALL(EnthalpyPT)
@@ -119,6 +119,9 @@ EXTRFUNC_DECL_FUNCCALL(EnthalpyPT)
    assert(data != NULL);
    assert(x != NULL);
    assert(funcvalue != NULL);
+   assert(derivrequest <= 2);
+   assert(derivrequest <= 1 || hessian  != NULL);
+   assert(derivrequest <= 0 || gradient != NULL);
    assert(errorcallback != NULL);
 
    if( nargs != 2 )
@@ -131,21 +134,12 @@ EXTRFUNC_DECL_FUNCCALL(EnthalpyPT)
    return EXTRFUNC_RETURN_OK;
 }
 
-/** Extrinsic Function implementing Cosine
- *
- * This function implements the callback for the Cosine function.
- * It checks whether the correct number of arguments has been passed,
- * the first argument is not too large to be evaluated, and the second
- * argument does not violate its domain.
- *
- * If first or second derivatives are requested, the callback also
- * computes these w.r.t. all endogenous arguments, i.e., the first argument.
+/** Extrinsic Function to calculate the specific enthalpy of fluid 
+ * for given temperature and specific entropy
  */
-EXTRFUNC_DECL_FUNCCALL(Cosine)
+EXTRFUNC_DECL_FUNCCALL(EnthalpyPs)
 {
    char msg[EXTRFUNC_STRSIZE];
-   double locX;
-   FUNCMODE funcmode;
 
    assert(data != NULL);
    assert(x != NULL);
