@@ -1,0 +1,7 @@
+LIBRARY propssicclib.dll
+EXPORTS
+xcreate
+xfree
+libinit
+PropsSI2
+querylibrary

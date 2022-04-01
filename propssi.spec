@@ -33,7 +33,7 @@
 # with name 'MODE' is considered as exogenous.
 # As Endogenous is defined to be the special keyword __OTHER__, we could
 # also skip the 'Endogenous = x' line, as it is implied by the defaults.
-Endogenous = P T s
+Endogenous = Value1 Value2
 Exogenous = __OTHER__
 
 
@@ -51,38 +51,8 @@ Languages   = C
 # - the vendor is the GAMS Development Corp.
 # - no license is required to use this library
 
-
-[Tcrit]
-# For each function, we specify its (non-default) properties with such a section.
-# The section name must coincide with the section name.
-# Here we specify properties of the 'Tcrit' function.
-
-# We specify a descriptive text for the function. This text is also passed
-# through the library and will be displayed in the listing file as a
-# result of the $funclibin command.
-Description = Return the critical temperature of water
-MaxDerivative = 0
-
-[Pcrit]
-# Same as [Tcrit] section
-Description = Return the critical temperature of water
-MaxDerivative = 0
-
-[EnthalpyPT]
-Description = EnthalpyPT: Returns specific enthalpy of a fluid at a given pressure and temperature
-Arguments = P T
-MaxDerivative = 2
-
-[EnthalpyPs]
-Description = EnthalpyPs: Returns specific enthalpy of a fluid at a given pressure and specific entropy
-# We encode this separation between mandatory and optional
-# arguments via the '|' sign. That is, all arguments before '|' are
-# mandatory and all arguments after '|' are optional.
-Arguments = P s
-MaxDerivative = 2
-
-[EntropyPT]
-Description = EntropyPT: Returns specific entropy of a fluid at a given pressure and temperature
-Arguments = P T
+[PropsSI2]
+Description = CoolProp PropsSI implementation for GAMS
+Arguments = Prop Prop1 Value1 Prop2 Value2 Fluid
 MaxDerivative = 2
 
