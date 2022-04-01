@@ -3,5 +3,5 @@
 *.log~*
 *.lst
 *.lxi
-
+.vscode
 *.dylib
